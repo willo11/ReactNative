@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
-import { View, Platform, Image, StyleSheet, ScrollView, Text } from 'react-native';
+import { Image, NetInfo, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Toast from 'react-native-root-toast';
 import { Icon } from 'react-native-elements';
 import Menu from './MenuComponent';
 import Dishdetail from './DishdetailComponent';
@@ -8,6 +9,7 @@ import Home from './HomeComponent';
 import Contact from './ContactComponent';
 import About from './AboutComponent';
 import Favorites from './FavoriteComponent';
+import Login from './LoginComponent';
 import { createDrawerNavigator, createStackNavigator, DrawerItems, SafeAreaView } from 'react-navigation';
 import { connect } from 'react-redux';
 import { fetchComments, fetchDishes, fetchLeaders, fetchPromos } from '../redux/ActionCreators';
@@ -136,6 +138,24 @@ const FavoritesNavigator = createStackNavigator({
     })
 });
 
+const LoginNavigator = createStackNavigator({
+    Login: { screen: Login },
+}, {
+    navigationOptions: ({ navigation }) => ({
+        headerStyle: {
+            backgroundColor: '#512DA8'
+        },
+        headerTintColor: '#fff',
+        headerTitleStyle: {
+            color: '#fff'
+        },
+        headerLeft: <Icon name='menu' size={24}
+            color='white'
+            onPress={() => navigation.toggleDrawer()}
+        />
+    })
+});
+
 const CustomDrawerContentComponent = (props) => (
     <ScrollView>
         <SafeAreaView style={styles.container}
@@ -155,6 +175,21 @@ const CustomDrawerContentComponent = (props) => (
 );
 
 const MainNavigator = createDrawerNavigator({
+    Login: {
+        screen: LoginNavigator,
+        navigationOptions: {
+            title: 'Login',
+            drawerLabel: 'Login',
+            drawerIcon: ({ tintColor }) => (
+                <Icon
+                    name='sign-in'
+                    type='font-awesome'
+                    size={24}
+                    color={tintColor}
+                />
+            )
+        }
+    },
     Home: {
         screen: HomeNavigator,
         navigationOptions: {
@@ -249,6 +284,7 @@ const MainNavigator = createDrawerNavigator({
         }    
     },
 }, {
+    initialRouteName: 'Home',
     drawerBackgroundColor: '#D1C4E9',
     contentComponent: CustomDrawerContentComponent,
 })
@@ -260,6 +296,39 @@ class Main extends Component {
         this.props.fetchDishes();
         this.props.fetchLeaders();
         this.props.fetchPromos();
+
+        NetInfo.getConnectionInfo()
+            .then((connectionInfo) => {
+                Toast.show(
+                    `Initial Network Connectivity Type: ${connectionInfo.type}, effectiveType: ${connectionInfo.effectiveType}`,
+                    { duration: Toast.durations.LONG },
+                )
+            });
+        
+        NetInfo.addEventListener('connectionChange', this.handleConnectivityChange);
+    }
+
+    componentWillUnmount() {
+        NetInfo.removeEventListener('connectionChange', this.handleConnectivityChange);
+    }
+
+    handleConnectivityChange = (connectionInfo) => {
+        switch (connectionInfo.type) {
+            case 'none':
+                Toast.show('You are now offline!', { duration: Toast.durations.LONG });
+                break;
+            case 'wifi':
+                Toast.show('You are now connected to WiFi!', { duration: Toast.durations.LONG });
+                break;
+            case 'cellular':
+                Toast.show('You are now connected to Cellular!', { duration: Toast.durations.LONG });
+                break;
+            case 'unknown':
+                Toast.show('You now have an unknown connection!', { duration: Toast.durations.LONG });
+                break;
+            default:
+                break;
+        }
     }
 
     render() {
